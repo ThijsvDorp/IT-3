@@ -1,0 +1,190 @@
+@startuml
+
+class Main {
+}
+
+class ChatClient {
+    - mediator : ClientMediator
+    - communicator : NetworkCommunicator
+    - sessionManager : SessionManager
+    - commandManager : CommandManager
+    - serverMessageProcessor : ServerMessageProcessor
+    - uiManager : UserInterfaceManager
+
+    + ChatClient(serverAddress: String, serverPort: int, inputHandler: InputInterface, outputHandler: OutputInterface)
+    + disconnect(): void
+    - startListeningForServerMessages(): void
+}
+
+
+class ClientMediator {
+    - uiManager : UserInterfaceManager
+    - messageProcessor : ServerMessageProcessor
+    - communicator : NetworkCommunicator
+    - commandManager : CommandManager
+    - sessionManager : SessionManager
+
+    + getInput(prompt: String): String
+    + display(message: String): void
+    + sendToServer(command: Command): void
+    + showCommandMenu(): void
+    + processUserInput(userInput: String): void
+    + processServerMessage(message: String): void
+    + startListeningForUserInput(): void
+    + initiateLogin(): void
+    + handleLoginResponse(response: Response): void
+    + logout(): void
+}
+
+class NetworkCommunicator {
+     - socket : Socket
+     - out : PrintWriter
+     - in : BufferedReader
+
+     + NetworkCommunicator(serverAddress: String, serverPort: int)
+     + sendRequest(request: String): void
+     + readResponse(): String
+     + close(): void
+ }
+
+class SessionManager {
+    - LOGIN_TIMEOUT : long {static}
+    - userSession : UserSession
+    - loginTimer : Timer
+    - mediator : ClientMediator
+
+    + SessionManager()
+    + initiateLogin(): void
+    + handleLoginResponse(response: Response): void
+    + logout(): void
+    + setMediator(mediator: ClientMediator): void
+    - sendLoginRequest(username: String): void
+    - startLoginTimer(): void
+    - retryLogin(): void
+}
+
+class UserSession {
+    - username : String
+    - loggedIn : boolean
+    - awaitingLoginResponse : boolean
+
+    + setUsername(username: String): void
+    + setLoggedIn(loggedIn: boolean): void
+    + setAwaitingLoginResponse(awaiting: boolean): void
+    + isAwaitingLogin(): boolean
+    + logout(): void
+}
+
+
+class CommandManager {
+    - mediator : ClientMediator
+
+    + CommandManager()
+    + processUserInput(userInput: String): void
+    + setMediator(mediator: ClientMediator): void
+    - processBroadcastCommand(message: String): void
+}
+
+class ServerMessageProcessor {
+    - mediator : ClientMediator
+    - objectMapper : ObjectMapper
+    - responseHandler : ResponseHandler
+    - commandHandler : CommandHandler
+
+    + ServerMessageProcessor()
+    + handleMessage(messageJson: String): void
+    + setMediator(mediator: ClientMediator): void
+    - isResponse(jsonBody: String): boolean
+}
+
+class CommandHandler {
+    - mediator : ClientMediator
+    - objectMapper : ObjectMapper
+
+    + CommandHandler()
+    + processCommand(header: String, jsonBody: String): void
+    + setMediator(mediator: ClientMediator): void
+}
+
+class ResponseHandler {
+    - mediator : ClientMediator
+
+    + ResponseHandler()
+    + handleResponse(responseHeader: String, response: Response): void
+    + setMediator(mediator: ClientMediator): void
+    - handleBroadCastResponse(response: Response): void
+}
+
+class UserInterfaceManager {
+    - inputHandler : InputInterface
+    - outputHandler : OutputInterface
+
+    + UserInterfaceManager(inputHandler: InputInterface, outputHandler: OutputInterface)
+    + showMenu(): void
+    + display(message: String): void
+    + getUserInput(): String
+    + getUserInput(prompt: String): String
+}
+
+interface InputInterface {
+    + getInput(): String
+    + getInput(prompt: String): String
+    + showMenu(): void
+}
+
+
+interface OutputInterface {
+    + display(message: String): void
+    + showCommands(): void
+}
+class ConsoleInput {
+    - scanner : Scanner
+
+    + ConsoleInput()
+    + getInput(): String
+    + getInput(prompt: String): String
+    + showMenu(): void
+}
+
+class ConsoleOutput {
+    + display(message: String): void
+    + showCommands(): void
+}
+
+class BroadcastCommand {
+    + BroadcastCommand(message: String)
+}
+
+ChatClient --> ClientMediator
+ChatClient --> NetworkCommunicator
+ChatClient --> SessionManager
+ChatClient --> CommandManager
+ChatClient --> ServerMessageProcessor
+ChatClient --> UserInterfaceManager
+ClientMediator --> UserInterfaceManager
+ClientMediator --> ServerMessageProcessor
+ClientMediator --> NetworkCommunicator
+ClientMediator --> CommandManager
+ClientMediator --> SessionManager
+SessionManager --> "1" UserSession
+SessionManager --> "1" ClientMediator
+SessionManager --> "creates" LoginRequest
+SessionManager ..> "uses" Response
+UserInterfaceManager --> "1" InputInterface
+UserInterfaceManager --> "1" OutputInterface
+ConsoleInput --> "1" InputInterface
+ConsoleOutput --> "1" OutputInterface
+CommandManager --> "1" ClientMediator
+CommandManager --> "creates" BroadcastCommand
+ServerMessageProcessor --> "1" ClientMediator
+ServerMessageProcessor --> "1" ObjectMapper
+ServerMessageProcessor --> "1" ResponseHandler
+ServerMessageProcessor --> "1" CommandHandler
+CommandHandler --> "1" ClientMediator
+CommandHandler --> "1" ObjectMapper
+CommandHandler --> "creates" WelcomeCommand
+ResponseHandler --> "1" ClientMediator
+ResponseHandler ..> "uses" Response
+Main --> ChatClient
+
+@enduml

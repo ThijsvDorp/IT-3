@@ -1,0 +1,60 @@
+@startuml
+actor "client1" as Client1
+entity "ClientApp1" as App1
+participant ":Server" as Server
+entity "ClientApp2" as App2
+actor "client2" as Client2
+
+note over App1, App2: Key Exchange Protocol
+
+
+
+activate App1
+alt No Keypair
+App1 -> App1: generate keypair
+end
+App1 -> Server: send public key
+activate Server
+Server -> App2: forward public key
+activate App2
+App2 -> App2: generate \nsession key
+App2 -> App2: encrypt session key \nwith public key
+App2 -> Server: forward session key
+deactivate App2
+Server -> App1: forward session key
+deactivate Server
+App1 -> App1: decrypt session key \nwith private key
+
+
+
+
+
+note over App1, App2: Private Message Protocol
+activate Client1
+deactivate App1
+Client1 -> App1: type message
+deactivate Client1
+
+activate App1
+
+alt no session key
+App1 -> App1: initialise Key \nExchange Protocol
+end
+
+App1 -> App1: encrypt message\nusing session key
+App1 -> Server: forward message
+deactivate App1
+
+activate Server
+Server -> App2: forward message
+deactivate Server
+
+activate App2
+App2 -> App2: decrypt message\nusing session key
+App2 -> Client2: show message
+deactivate App2
+
+activate Client2
+deactivate Client2
+
+@enduml

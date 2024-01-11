@@ -1,0 +1,113 @@
+@startuml
+
+class Server {
+    - serverSocket : ServerSocket
+    - userManager : UserManager
+    - gameManager : GameManager
+    + start() : void
+    + stop() : void
+}
+
+class UserManager {
+    - registeredUsers : Map<String, ClientConnectionHandler>
+    - unregisteredUsers : List<ClientConnectionHandler>
+    + UserManager()
+    + addUnregisteredUser(handler : ClientConnectionHandler) : void
+    + loginUser(username : String, handler : ClientConnectionHandler) : boolean
+    + removeUser(username : String) : void
+    + getUser(username : String) : ClientConnectionHandler
+    + broadcastMessage(message : String, senderUsername : String) : void
+}
+
+class ClientConnectionHandler {
+    - socket : Socket
+    - input : BufferedReader
+    - output : PrintWriter
+    - running : boolean
+    - messageProcessor : MessageProcessor
+    + ClientConnectionHandler(socket : Socket, messageProcessor : MessageProcessor)
+    + run() : void
+    + sendMessage(message : String) : void
+    + disconnect() : void
+}
+
+class MessageHandler {
+    - userManager : UserManager
+    - gameManager : GameManager
+    + MessageProcessor(userManager : UserManager, gameManager : GameManager, protocolManager : ProtocolManager)
+    + processMessage(message : String, clientHandler : ClientConnectionHandler) : void
+    + sendResponse(response : Response, clientHandler : ClientConnectionHandler) : void
+}
+
+class Command {
+    # commandType : String
+    # payload : Map<String, Object>
+    + toJson() : String
+}
+
+class LoginRequest extends Command {}
+class BroadcastCommand extends Command {}
+class PrivateMessageCommand extends Command {}
+class GameStartCommand extends Command {}
+class GameGuessCommand extends Command {}
+
+class Response {
+    - status : String
+    - data : Map<String, Object>
+    + toJson() : String
+}
+
+class GameManager {
+    - currentGame : GameSession
+    - observers : List<ClientConnectionHandler>
+    + GameManager()
+    + startGame(initiatorUsername : String) : void
+    + processGameGuess(guess : int, username : String) : void
+    + endGame() : void
+    + addObserver(handler : ClientConnectionHandler) : void
+    + removeObserver(handler : ClientConnectionHandler) : void
+    + notifyObservers(update : Map<String, Object>) : void
+}
+
+class GameSession {
+    - targetNumber : int
+    - guesses : Map<String, Integer>
+    - startTime : long
+    - initiatorUsername : String
+    + GameSession(initiatorUsername : String)
+    + addGuess(username : String, guess : int) : boolean
+    + isNumberGuessed() : boolean
+    + getResults() : Map<String, Integer>
+}
+
+class FileTransferManager {
+    + initiateFileTransfer(file : File, recipient : String) : void
+    + receiveFileData(data : byte[], sender : String) : void
+    + completeFileTransfer() : void
+}
+
+class EncryptionManager {
+    + encryptMessage(message : String) : String
+    + decryptMessage(message : String) : String
+    + generateKeyPair() : KeyPair
+    + exchangePublicKey(publicKey : PublicKey) : void
+}
+
+
+Server --> UserManager : uses >
+Server --> GameManager : uses >
+ClientConnectionHandler --> MessageHandler : uses >
+MessageHandler --> UserManager : uses >
+MessageHandler --> GameManager : uses >
+UserManager --> "many" ClientConnectionHandler : tracks >
+FileTransferManager ..> "uses" Command : utilizes >
+EncryptionManager ..> "uses" Command : utilizes >
+Command <|-- LoginRequest
+Command <|-- BroadcastCommand
+Command <|-- PrivateMessageCommand
+Command <|-- GameStartCommand
+Command <|-- GameGuessCommand
+GameManager --> GameSession : manages >
+GameManager ..> ClientConnectionHandler : notify >
+
+@enduml
